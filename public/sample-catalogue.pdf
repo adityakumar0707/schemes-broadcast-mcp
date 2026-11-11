@@ -1,0 +1,59 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1223 >>
+stream
+BT /F2 20 Tf 50 780 Td (Sample Product Catalogue) Tj ET
+BT /F1 10 Tf 0.35 g 50 755 Td (Upload this file in Products > Upload catalogue. Format: Product | Price | Unit) Tj ET 0 g
+0.85 0.95 0.9 rg 45 707 500 26 re f 0 g
+BT /F2 13 Tf 55 715 Td (Product | Price (Rs) | Unit) Tj ET
+BT /F1 13 Tf 55 685 Td (Tata Salt | 22 | kg) Tj ET
+0.8 G 0.5 w 45 677 m 545 677 l S 0 G
+BT /F1 13 Tf 55 657 Td (Surf Excel | 180 | kg) Tj ET
+0.8 G 0.5 w 45 649 m 545 649 l S 0 G
+BT /F1 13 Tf 55 629 Td (Maggi Noodles | 14 | pack) Tj ET
+0.8 G 0.5 w 45 621 m 545 621 l S 0 G
+BT /F1 13 Tf 55 601 Td (Parle G Biscuits | 10 | pack) Tj ET
+0.8 G 0.5 w 45 593 m 545 593 l S 0 G
+BT /F1 13 Tf 55 573 Td (Colgate Toothpaste | 95 | tube) Tj ET
+0.8 G 0.5 w 45 565 m 545 565 l S 0 G
+BT /F1 13 Tf 55 545 Td (Dettol Soap | 45 | piece) Tj ET
+0.8 G 0.5 w 45 537 m 545 537 l S 0 G
+BT /F1 13 Tf 55 517 Td (Aashirvaad Atta | 290 | kg) Tj ET
+0.8 G 0.5 w 45 509 m 545 509 l S 0 G
+BT /F1 13 Tf 55 489 Td (Amul Butter | 56 | pack) Tj ET
+0.8 G 0.5 w 45 481 m 545 481 l S 0 G
+BT /F1 13 Tf 55 461 Td (Britannia Good Day | 30 | pack) Tj ET
+0.8 G 0.5 w 45 453 m 545 453 l S 0 G
+BT /F1 13 Tf 55 433 Td (Vim Dishwash Gel | 99 | bottle) Tj ET
+0.8 G 0.5 w 45 425 m 545 425 l S 0 G
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001525 00000 n 
+0000001595 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1670
+%%EOF

@@ -25,11 +25,11 @@ public link  /o/<slug>  --> buyer opens it, taps "I'm interested" --> counted on
 
 | Tool | What it does |
 | --- | --- |
-| `upload_catalogue` | Add/update products (name, price, unit). Matches on name case-insensitively, so repeats don't duplicate. |
+| `upload_catalogue` | Add/update products (name, price, unit) and auto-find pictures. Matches on name case-insensitively, so repeats don't duplicate. |
 | `list_products` | List the catalogue (so Claude can map names to ids). |
 | `manage_group` | Create a buyer group if needed, add/remove a contact (removal by phone). |
 | `list_groups` | List groups with member counts. |
-| `create_offer` | Save an offer as **pending**. It is never visible to buyers until approved. |
+| `create_offer` | Save an offer (headline, discount, dates, WhatsApp `share_message`) as **pending**. Never visible to buyers until approved. |
 
 ### Approval flow
 
@@ -41,6 +41,25 @@ public link  /o/<slug>  --> buyer opens it, taps "I'm interested" --> counted on
 - The dashboard uses a Supabase session with Row Level Security policies (see `supabase/schema.sql`) plus explicit `distributor_id` filters.
 - The public page and the interest endpoint use the service-role key server-side only, and match only `status = 'approved'` offers. The service-role key is never sent to the browser.
 - The token can be regenerated from the Connect page (this invalidates the old one immediately).
+
+## Features beyond the basics
+
+- **Catalogue upload:** Products → *Upload catalogue* accepts a text-based PDF, CSV or TXT (`Product | Price | Unit`, one per line), shows a preview, and adds up to 10 products per upload. A sample file is available in the modal (`public/sample-catalogue.pdf`).
+- **Product pictures:** when a product is added (upload, form or MCP), a picture is looked up by name from the free [Open Food Facts](https://world.openfoodfacts.org) and Open Products Facts databases (no API key). A match requires every word of the product name, so wrong pictures are avoided. Coverage is best-effort: if nothing is found, the offer image shows a letter placeholder and the Products page has a "Find picture" button.
+- **Offer image:** on approval, a 1080x1080 shareable graphic (headline, discount, product pictures, prices, validity) is rendered server-side at `/o/<slug>/image` with Satori. No AI. The public page uses it as the link preview (`og:image`).
+- **WhatsApp sharing:** the dashboard's *Share image + message* uses the device share sheet with the image attached (choose WhatsApp, then search any contact). The message is the `share_message` that Claude wrote in `create_offer` (editable before approval). Fallbacks: download/copy image, copy message, per-contact `wa.me` chat links. WhatsApp does not allow attaching an image through a plain link, hence the share sheet.
+
+## Guardrails
+
+Deterministic rules in `lib/guardrails.ts` (no AI) run on every MCP tool, every dashboard form, and again when you click Approve:
+
+- Only FMCG: blocks adult content, illegal drugs, weapons, hate/extremism, gambling/crypto/loans and prescription medicine terms in product names, groups, offers and messages.
+- No personal data in public offers: phone numbers, emails and links are rejected, so buyer details cannot leak into an offer.
+- Sanity limits: discount at most 90%, valid price range, no past or far-future dates, max 20 offers per 24h, 30 pending offers, 500 products, 500 contacts per group.
+- Offers can only reference the distributor's own catalogue and groups, and are always saved as pending until a human approves them.
+- The MCP server also sends the connected model a scope statement (`instructions`) telling it to refuse non-FMCG requests and never put personal data in offers.
+
+Limitation: the app cannot control what a distributor's own Claude/ChatGPT says in chat outside these tools. It can refuse to store or publish anything outside its purpose, and a human approves every offer.
 
 ## Tech stack
 
@@ -56,7 +75,7 @@ Next.js 14 (App Router) + TypeScript, Tailwind, Supabase (Postgres + Auth), `@mo
    cd schemes-broadcast-mcp
    npm install
    ```
-2. **Create the database.** In the Supabase SQL editor, run the contents of `supabase/schema.sql`.
+2. **Create the database.** In the Supabase SQL editor, run the contents of `supabase/schema.sql`. (If you created the database from an earlier version, also run `supabase/migrations/002_images_and_share_message.sql`.)
 3. **Configure env vars.** Copy `.env.example` to `.env.local` and fill in:
    | Variable | Where to find it |
    | --- | --- |

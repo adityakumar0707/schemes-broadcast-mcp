@@ -17,6 +17,7 @@ create table products (
   name text not null,
   price numeric,
   unit text,
+  image_url text,
   created_at timestamptz not null default now()
 );
 create unique index products_dist_name_uq on products (distributor_id, lower(name));
@@ -43,6 +44,7 @@ create table offers (
   product_ids uuid[] not null,
   offer_text text not null,
   discount_detail text,
+  share_message text,
   valid_from date,
   valid_to date,
   group_id uuid references groups(id) on delete set null,

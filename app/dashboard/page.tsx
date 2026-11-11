@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireDistributor } from "@/lib/distributor";
-import { baseUrl, waLink } from "@/lib/url";
+import { baseUrl } from "@/lib/url";
+import { buildShareText } from "@/lib/share";
 import CopyButton from "@/components/CopyButton";
+import ShareOffer from "@/components/ShareOffer";
 
 export default async function Dashboard({ searchParams }: { searchParams: { new?: string } }) {
   const { sb, distributor } = await requireDistributor();
@@ -10,25 +12,46 @@ export default async function Dashboard({ searchParams }: { searchParams: { new?
   const live = (offers ?? []).filter((o) => o.status === "approved");
   const pending = (offers ?? []).filter((o) => o.status === "pending");
 
-  // Click/interest counts for live offers (RLS limits offer_clicks to own offers).
+  // Click/interest counts and group contacts for live offers (RLS limits both to this distributor).
   const counts = new Map<string, number>();
+  const members = new Map<string, { contact_name: string; phone: string }[]>();
   if (live.length) {
     const { data: clicks } = await sb.from("offer_clicks").select("offer_id").in("offer_id", live.map((o) => o.id));
     clicks?.forEach((c) => counts.set(c.offer_id, (counts.get(c.offer_id) ?? 0) + 1));
+    const gids = Array.from(new Set(live.map((o) => o.group_id).filter(Boolean)));
+    if (gids.length) {
+      const { data: gm } = await sb.from("group_members").select("group_id,contact_name,phone").in("group_id", gids);
+      gm?.forEach((m) => members.set(m.group_id, [...(members.get(m.group_id) ?? []), { contact_name: m.contact_name, phone: m.phone }]));
+    }
   }
 
-  const newLink = searchParams.new ? `${base}/o/${searchParams.new}` : null;
   const newOffer = searchParams.new ? live.find((o) => o.share_link_slug === searchParams.new) : null;
+
+  const shareBlock = (o: (typeof live)[number]) => {
+    const url = `${base}/o/${o.share_link_slug}`;
+    return (
+      <ShareOffer
+        imageUrl={`/o/${o.share_link_slug}/image`}
+        url={url}
+        text={buildShareText(o, url)}
+        members={members.get(o.group_id) ?? []}
+      />
+    );
+  };
 
   return (
     <div className="space-y-8">
-      {newLink && (
+      {newOffer && (
         <div className="card border-emerald-300 bg-emerald-50">
           <p className="font-semibold">Offer approved and live</p>
-          <p className="mt-1 break-all text-sm">{newLink}</p>
-          <div className="mt-3 flex gap-2">
-            <CopyButton text={newLink} />
-            <a className="btn" target="_blank" href={waLink(newOffer?.offer_text ?? "New scheme", newLink)}>Share on WhatsApp</a>
+          <p className="mt-1 break-all text-sm">{base}/o/{newOffer.share_link_slug}</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-[200px_1fr]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/o/${newOffer.share_link_slug}/image`} alt="Offer graphic" className="w-full rounded border" />
+            <div>
+              <p className="whitespace-pre-line text-sm text-gray-700">{buildShareText(newOffer, `${base}/o/${newOffer.share_link_slug}`)}</p>
+              {shareBlock(newOffer)}
+            </div>
           </div>
         </div>
       )}
@@ -60,10 +83,8 @@ export default async function Dashboard({ searchParams }: { searchParams: { new?
                 <p className="mt-1 text-xs text-gray-500">For: {o.groups?.name ?? "-"} · Valid to: {o.valid_to ?? "-"}</p>
                 <a href={url} target="_blank" className="mt-2 block break-all text-sm text-emerald-700 underline">{url}</a>
                 <p className="mt-2 text-sm"><b>{counts.get(o.id) ?? 0}</b> interested</p>
-                <div className="mt-2 flex gap-2">
-                  <CopyButton text={url} />
-                  <a className="btn-secondary" target="_blank" href={waLink(o.offer_text, url)}>WhatsApp</a>
-                </div>
+                <div className="mt-2"><CopyButton text={url} /></div>
+                {shareBlock(o)}
               </div>
             );
           })}
