@@ -61,6 +61,15 @@ Deterministic rules in `lib/guardrails.ts` (no AI) run on every MCP tool, every 
 
 Limitation: the app cannot control what a distributor's own Claude/ChatGPT says in chat outside these tools. It can refuse to store or publish anything outside its purpose, and a human approves every offer.
 
+## Performance notes
+
+- **Keep the app and the database in the same region.** Every Supabase call from the server pays the network distance between them. `vercel.json` pins the serverless functions to `bom1` (Mumbai) because the Supabase project is in India; change it to the Vercel region closest to *your* Supabase project (Supabase → Project Settings → General shows the region).
+- No Supabase round trip per request for auth: the session JWT is verified locally against the project's public keys (`lib/jwt.ts`), and the distributor id travels inside the token (`app_metadata.distributor_id`).
+- Login and signup are single server requests; the Supabase JS client is not shipped to the browser.
+- Independent queries run in parallel; product pictures are looked up after the response is sent; the public offer page is cached for 60 seconds; dashboard routes show a loading skeleton and buttons show a pending state immediately.
+- `supabase/migrations/003_performance.sql` adds indexes and rewrites the RLS policies so Postgres evaluates them once per query.
+- For local use, `npm run build && npm start` is much faster than `npm run dev`, which compiles on demand.
+
 ## Tech stack
 
 Next.js 14 (App Router) + TypeScript, Tailwind, Supabase (Postgres + Auth), `@modelcontextprotocol/sdk` (stateless Streamable HTTP in a Next.js route), deployable to Vercel.
