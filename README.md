@@ -50,7 +50,7 @@ Next.js 14 (App Router) + TypeScript, Tailwind, Supabase (Postgres + Auth), `@mo
 
 1. **Clone and install**
    ```bash
-   git clone https://github.com/<owner>/schemes-broadcast-mcp.git
+   git clone https://github.com/adityakumar0707/schemes-broadcast-mcp.git
    cd schemes-broadcast-mcp
    npm install
    ```
