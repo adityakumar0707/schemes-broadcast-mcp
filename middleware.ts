@@ -13,7 +13,9 @@ export async function middleware(req: NextRequest) {
       },
     },
   });
+  const t0 = Date.now();
   const { data: { user } } = await supabase.auth.getUser();
+  res.headers.set("Server-Timing", `mw-auth;dur=${Date.now() - t0}`);
   if (!user) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
