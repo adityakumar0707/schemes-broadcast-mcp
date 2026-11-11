@@ -4,6 +4,8 @@ A B2B tool for FMCG distributors. The distributor's **own Claude or ChatGPT** dr
 
 > **There is no AI/LLM API key anywhere in this codebase.** All generation happens in the distributor's own Claude/ChatGPT session. This app is a plain CRUD backend + an MCP tool surface + a dashboard + a public offer page.
 
+**Live demo:** https://schemes-broadcast-mcp.vercel.app (sign up with any email to try it)
+
 ## Why this exists
 
 Distributors announce schemes ("10% off Tata Salt this week") by phone calls and unstructured WhatsApp text. There is no record, no targeting, and no safe approval step. Claude alone cannot persist an offer, show a tap-to-approve card, or give a retailer without Claude a link to open. This app does exactly those parts. See the Approval flow section below.
