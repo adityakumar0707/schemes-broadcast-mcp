@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireDistributor } from "@/lib/distributor";
 import { LIMITS, checkDates, checkPhone, checkPrice, checkPublicText, checkText, first } from "@/lib/guardrails";
-import { findProductImage } from "@/lib/productImage";
+import { fillImagesInBackground, findProductImage } from "@/lib/productImage";
 
 // All actions use the session (RLS) client AND filter by distributor_id explicitly.
 // Every text path goes through lib/guardrails.ts, same as the MCP tools.
@@ -68,11 +68,14 @@ export async function rejectOffer(id: string) {
 const P = "/dashboard/products";
 
 async function upsertProduct(sb: Awaited<ReturnType<typeof requireDistributor>>["sb"], distributorId: string, row: { name: string; price: number | null; unit: string | null }) {
-  const { data: existing } = await sb.from("products").select("id,image_url").eq("distributor_id", distributorId).ilike("name", row.name.replace(/[%_\\]/g, "\\$&")).maybeSingle();
-  const patch: Record<string, unknown> = { ...row };
-  if (!existing?.image_url) { const img = await findProductImage(row.name); if (img) patch.image_url = img; }
-  if (existing) await sb.from("products").update(patch).eq("id", existing.id);
-  else await sb.from("products").insert({ ...patch, distributor_id: distributorId });
+  const escaped = row.name.replace(/[%_\\]/g, (c) => "\\" + c);
+  const { data: existing } = await sb.from("products").select("id,image_url").eq("distributor_id", distributorId).ilike("name", escaped).maybeSingle();
+  if (existing) {
+    await sb.from("products").update(row).eq("id", existing.id);
+    return existing.image_url ? null : { id: existing.id as string, name: row.name };
+  }
+  const { data } = await sb.from("products").insert({ ...row, distributor_id: distributorId }).select("id").single();
+  return data ? { id: data.id as string, name: row.name } : null;
 }
 
 function checkProductRow(r: { name: string; price: number | null; unit: string | null }) {
@@ -88,7 +91,8 @@ export async function addProduct(f: FormData) {
   if (bad) back(P, bad);
   const { count } = await sb.from("products").select("id", { count: "exact", head: true }).eq("distributor_id", distributor.id);
   if ((count ?? 0) >= LIMITS.maxProducts) back(P, `Catalogue limit is ${LIMITS.maxProducts} products.`);
-  await upsertProduct(sb, distributor.id, row);
+  const need = await upsertProduct(sb, distributor.id, row);
+  if (need) fillImagesInBackground(distributor.id, [need]); // picture arrives a few seconds later
   revalidatePath(P);
 }
 
@@ -104,7 +108,8 @@ export async function importProducts(f: FormData) {
   for (const r of rows) { const bad = checkProductRow(r); if (bad) back(P, `${bad} (row: "${r.name}")`); }
   const { count } = await sb.from("products").select("id", { count: "exact", head: true }).eq("distributor_id", distributor.id);
   if ((count ?? 0) + rows.length > LIMITS.maxProducts) back(P, `Catalogue limit is ${LIMITS.maxProducts} products.`);
-  await Promise.all(rows.map((r) => upsertProduct(sb, distributor.id, r)));
+  const results = await Promise.all(rows.map((r) => upsertProduct(sb, distributor.id, r)));
+  fillImagesInBackground(distributor.id, results.filter((r): r is { id: string; name: string } => !!r)); // pictures arrive a few seconds later
   revalidatePath(P);
   redirect(`${P}?added=${rows.length}`);
 }

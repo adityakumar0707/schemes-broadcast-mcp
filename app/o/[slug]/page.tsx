@@ -1,9 +1,11 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { baseUrl } from "@/lib/url";
 import InterestForm from "@/components/InterestForm";
 
-export const dynamic = "force-dynamic";
+// Public offers are cached for 60 seconds, so buyers opening a shared link get an instant response.
+export const revalidate = 60;
 
 function Unavailable() {
   return (
@@ -13,14 +15,14 @@ function Unavailable() {
   );
 }
 
-async function getOffer(slug: string) {
+const getOffer = cache(async (slug: string) => {
   // Service role used server-side only; the query is hard-scoped to approved offers.
   const db = supabaseAdmin();
   const { data: offer } = await db.from("offers")
     .select("id, product_ids, offer_text, discount_detail, valid_from, valid_to")
     .eq("share_link_slug", slug).eq("status", "approved").maybeSingle();
   return { db, offer };
-}
+});
 
 // Link preview (WhatsApp, etc.) shows the generated offer image.
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {

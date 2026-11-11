@@ -1,12 +1,15 @@
 import { requireDistributor } from "@/lib/distributor";
 import { baseUrl } from "@/lib/url";
 import { regenerateToken } from "../actions";
+import SubmitButton from "@/components/SubmitButton";
 import CopyButton from "@/components/CopyButton";
 
 export default async function Connect() {
-  const { distributor } = await requireDistributor();
+  const { sb, distributor } = await requireDistributor();
+  const { data: row } = await sb.from("distributors").select("mcp_token").eq("id", distributor.id).single();
+  const token = row?.mcp_token ?? "";
   const url = `${baseUrl()}/api/mcp`;
-  const urlWithToken = `${url}?token=${distributor.mcp_token}`;
+  const urlWithToken = `${url}?token=${token}`;
   return (
     <div className="max-w-2xl space-y-4">
       <h1 className="text-xl font-bold">Connect Claude or ChatGPT</h1>
@@ -22,12 +25,12 @@ export default async function Connect() {
       <div className="card space-y-2">
         <p className="text-sm font-medium">Base URL + personal token (Bearer)</p>
         <code className="block break-all rounded bg-gray-100 p-2 text-xs">{url}</code>
-        <code className="block break-all rounded bg-gray-100 p-2 text-xs">{distributor.mcp_token}</code>
-        <div className="flex gap-2"><CopyButton text={url} label="Copy URL" /><CopyButton text={distributor.mcp_token} label="Copy token" /></div>
+        <code className="block break-all rounded bg-gray-100 p-2 text-xs">{token}</code>
+        <div className="flex gap-2"><CopyButton text={url} label="Copy URL" /><CopyButton text={token} label="Copy token" /></div>
       </div>
       <form action={regenerateToken} className="card">
         <p className="mb-2 text-sm text-gray-600">Regenerating invalidates the old token immediately; reconnect your client afterwards.</p>
-        <button className="btn-danger">Regenerate token</button>
+        <SubmitButton className="btn-danger" pendingText="Regenerating…">Regenerate token</SubmitButton>
       </form>
     </div>
   );

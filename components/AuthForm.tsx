@@ -1,8 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase/browser";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -11,17 +10,18 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Warm up the dashboard route while the user types.
+  useEffect(() => { router.prefetch("/dashboard"); }, [router]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError("");
-    if (mode === "signup") {
-      // Server route creates the auth user (pre-confirmed) + distributors row.
-      const r = await fetch("/api/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
-      if (!r.ok) { setError((await r.json()).error ?? "Signup failed"); setBusy(false); return; }
-    }
-    const { error } = await supabaseBrowser().auth.signInWithPassword({ email, password });
-    if (error) { setError(error.message); setBusy(false); return; }
-    router.push("/dashboard"); router.refresh();
+    try {
+      // One server request signs in (or signs up and signs in) and sets the cookies.
+      const r = await fetch(mode === "signup" ? "/api/signup" : "/api/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
+      if (!r.ok) { setError((await r.json().catch(() => ({}))).error ?? "Something went wrong"); setBusy(false); return; }
+      router.replace("/dashboard");
+    } catch { setError("Network error. Try again."); setBusy(false); }
   }
 
   return (
@@ -32,7 +32,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <input className="input" type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <input className="input" type="password" placeholder="Password (min 6 chars)" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button className="btn w-full" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Log in" : "Sign up"}</button>
+        <button className="btn w-full" disabled={busy}>{busy ? (mode === "login" ? "Signing in…" : "Creating account…") : mode === "login" ? "Log in" : "Sign up"}</button>
       </form>
       <p className="mt-4 text-center text-sm">
         {mode === "login" ? <>New here? <Link className="text-emerald-700 underline" href="/signup">Sign up</Link></> : <>Have an account? <Link className="text-emerald-700 underline" href="/login">Log in</Link></>}

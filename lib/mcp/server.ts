@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { findProductImage } from "@/lib/productImage";
+import { fillImagesInBackground } from "@/lib/productImage";
 import { LIMITS, MCP_INSTRUCTIONS, checkDates, checkPhone, checkPrice, checkPublicText, checkText, first } from "@/lib/guardrails";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -22,7 +22,7 @@ export function buildServer(distributorId: string) {
   const server = new McpServer({ name: "scheme-broadcast", version: "0.2.0" }, { instructions: MCP_INSTRUCTIONS });
 
   server.registerTool("upload_catalogue", {
-    description: `Add or update FMCG products in the distributor's catalogue (max ${LIMITS.productsPerMcpCall} per call). Matches on name (case-insensitive) so repeats do not create duplicates. A product picture is looked up automatically from public product databases. Only FMCG / everyday consumer goods are accepted.`,
+    description: `Add or update FMCG products in the distributor's catalogue (max ${LIMITS.productsPerMcpCall} per call). Matches on name (case-insensitive) so repeats do not create duplicates. A product picture is looked up automatically in the background from public product databases. Only FMCG / everyday consumer goods are accepted.`,
     inputSchema: {
       products: z.array(z.object({ name: z.string().min(1), price: z.number().optional(), unit: z.string().optional() })).min(1).max(LIMITS.productsPerMcpCall),
     },
@@ -37,19 +37,12 @@ export function buildServer(distributorId: string) {
     const newCount = new Set(products.map((p) => p.name.trim().toLowerCase()).filter((k) => !byName.has(k))).size;
     if ((existing?.length ?? 0) + newCount > LIMITS.maxProducts) return blocked(`Catalogue limit is ${LIMITS.maxProducts} products.`);
 
-    // Look up pictures in parallel for products that do not have one yet.
-    const need = products.filter((p) => !byName.get(p.name.trim().toLowerCase())?.image_url);
-    const found = new Map<string, string | null>();
-    await Promise.all(need.map(async (p) => found.set(p.name.trim().toLowerCase(), await findProductImage(p.name.trim()))));
-
     const out: unknown[] = [];
     for (const p of products) {
       const key = p.name.trim().toLowerCase();
       const patch: Record<string, unknown> = { name: p.name.trim() };
       if (p.price !== undefined) patch.price = p.price;
       if (p.unit !== undefined) patch.unit = p.unit;
-      const img = found.get(key);
-      if (img) patch.image_url = img;
       const prev = byName.get(key);
       const res = prev
         ? await db.from("products").update(patch).eq("id", prev.id).eq("distributor_id", distributorId).select().single()
@@ -58,7 +51,9 @@ export function buildServer(distributorId: string) {
       byName.set(key, res.data);
       out.push(res.data);
     }
-    return ok(out, "image_url is filled when a matching product picture was found; otherwise the offer image uses a text placeholder.");
+    // Pictures are looked up after we respond (public APIs can take seconds), then saved.
+    fillImagesInBackground(distributorId, (out as { id: string; name: string; image_url: string | null }[]).filter((p) => !p.image_url).map((p) => ({ id: p.id, name: p.name })));
+    return ok(out, "Saved. Product pictures are being looked up in the background and will appear in the dashboard within a few seconds; where none is found the offer image uses a text placeholder.");
   });
 
   server.registerTool("list_products", {

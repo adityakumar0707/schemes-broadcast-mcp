@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { importProducts } from "@/app/dashboard/actions";
+import SubmitButton from "./SubmitButton";
 
 type Row = { name: string; price: number | null; unit: string | null };
 
@@ -58,7 +59,7 @@ export default function ProductUploadModal() {
                 </div>
                 <input type="hidden" name="rows" value={JSON.stringify(rows)} />
                 <div className="mt-4 flex gap-2">
-                  <button className="btn">Add {rows.length} products</button>
+                  <SubmitButton pendingText="Adding products…">Add {rows.length} products</SubmitButton>
                   <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
                 </div>
               </form>

@@ -16,13 +16,14 @@ export default async function Dashboard({ searchParams }: { searchParams: { new?
   const counts = new Map<string, number>();
   const members = new Map<string, { contact_name: string; phone: string }[]>();
   if (live.length) {
-    const { data: clicks } = await sb.from("offer_clicks").select("offer_id").in("offer_id", live.map((o) => o.id));
-    clicks?.forEach((c) => counts.set(c.offer_id, (counts.get(c.offer_id) ?? 0) + 1));
     const gids = Array.from(new Set(live.map((o) => o.group_id).filter(Boolean)));
-    if (gids.length) {
-      const { data: gm } = await sb.from("group_members").select("group_id,contact_name,phone").in("group_id", gids);
-      gm?.forEach((m) => members.set(m.group_id, [...(members.get(m.group_id) ?? []), { contact_name: m.contact_name, phone: m.phone }]));
-    }
+    // Independent queries run at the same time instead of one after another.
+    const [{ data: clicks }, { data: gm }] = await Promise.all([
+      sb.from("offer_clicks").select("offer_id").in("offer_id", live.map((o) => o.id)),
+      gids.length ? sb.from("group_members").select("group_id,contact_name,phone").in("group_id", gids) : Promise.resolve({ data: [] as { group_id: string; contact_name: string; phone: string }[] }),
+    ]);
+    clicks?.forEach((c) => counts.set(c.offer_id, (counts.get(c.offer_id) ?? 0) + 1));
+    gm?.forEach((m) => members.set(m.group_id, [...(members.get(m.group_id) ?? []), { contact_name: m.contact_name, phone: m.phone }]));
   }
 
   const newOffer = searchParams.new ? live.find((o) => o.share_link_slug === searchParams.new) : null;

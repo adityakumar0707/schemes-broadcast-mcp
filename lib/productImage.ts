@@ -1,3 +1,6 @@
+import { waitUntil } from "@vercel/functions";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
 /**
  * Finds a product pack-shot by name using free, key-less public product databases. Best effort:
  * returns null if nothing credible matches. No AI involved.
@@ -68,4 +71,19 @@ export async function findProductImage(name: string): Promise<string | null> {
     } catch { /* rate limited or network error: try next source */ }
   }
   return null;
+}
+
+/**
+ * Looks up pictures AFTER the response has been sent (the public APIs can take seconds), then saves them.
+ * Callers return immediately; the pictures appear on the next refresh. Service role, scoped by distributor id.
+ */
+export function fillImagesInBackground(distributorId: string, items: { id: string; name: string }[]) {
+  if (!items.length) return;
+  waitUntil((async () => {
+    const db = supabaseAdmin();
+    await Promise.all(items.map(async (p) => {
+      const img = await findProductImage(p.name);
+      if (img) await db.from("products").update({ image_url: img }).eq("id", p.id).eq("distributor_id", distributorId);
+    }));
+  })());
 }

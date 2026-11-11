@@ -1,4 +1,5 @@
 import { requireDistributor } from "@/lib/distributor";
+import SubmitButton from "@/components/SubmitButton";
 import { addMember, deleteGroup, removeMember } from "../actions";
 
 export default async function Groups() {
@@ -12,7 +13,7 @@ export default async function Groups() {
         <datalist id="groups">{groups?.map((g) => <option key={g.id} value={g.name} />)}</datalist>
         <input name="contact_name" className="input !w-44" placeholder="Contact name" required />
         <input name="phone" className="input !w-40" placeholder="Phone" required />
-        <button className="btn">Add contact</button>
+        <SubmitButton pendingText="Adding…">Add contact</SubmitButton>
       </form>
       {groups?.length === 0 && <p className="text-sm text-gray-500">No groups yet.</p>}
       {groups?.map((g) => (

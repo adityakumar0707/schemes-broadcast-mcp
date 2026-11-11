@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireDistributor } from "@/lib/distributor";
+import SubmitButton from "@/components/SubmitButton";
 import { approveOffer, rejectOffer, saveOffer } from "../../actions";
 
 export default async function OfferPage({ params, searchParams }: { params: { id: string }; searchParams: { error?: string } }) {
@@ -65,9 +66,9 @@ export default async function OfferPage({ params, searchParams }: { params: { id
         </div>
         {editable && (
           <div className="flex flex-wrap gap-2 pt-2">
-            <button className="btn" formAction={approveOffer.bind(null, offer.id)} formMethod="post">Approve</button>
-            <button className="btn-secondary" formAction={saveOffer.bind(null, offer.id)} formMethod="post">Save changes</button>
-            <button className="btn-danger" formAction={rejectOffer.bind(null, offer.id)} formMethod="post" formNoValidate>Reject</button>
+            <SubmitButton formAction={approveOffer.bind(null, offer.id)} formMethod="post" pendingText="Approving…">Approve</SubmitButton>
+            <SubmitButton className="btn-secondary" formAction={saveOffer.bind(null, offer.id)} formMethod="post" pendingText="Saving…">Save changes</SubmitButton>
+            <SubmitButton className="btn-danger" formAction={rejectOffer.bind(null, offer.id)} formMethod="post" formNoValidate pendingText="Rejecting…">Reject</SubmitButton>
           </div>
         )}
       </form>
